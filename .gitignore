@@ -1,0 +1,28 @@
+# Ignore Python virtual environment
+venv/
+.venv/
+
+# Ignore Python cache files
+__pycache__/
+**/__pycache__/
+
+# Ignore PyCharm/JetBrains IDE files
+.idea/
+*.iml
+
+# Ignore environment variables and secrets
+.env
+*.env
+
+# Ignore compiled Python files
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore logs
+logs/
+*.log
+
+# Ignore dependency lock files (optional)
+Pipfile.lock
+poetry.lock
