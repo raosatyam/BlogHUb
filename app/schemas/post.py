@@ -1,22 +1,21 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 from app.schemas.category import CategoryOut
-from app.schemas.user import UserOut
+from app.schemas.user import UserOtherOut
 
 class PostBase(BaseModel):
     title: str
     content: str
     image: Optional[str] = None
 
+class PostUpdate(PostBase):
+    pass
+
 class PostCreate(PostBase):
-    user_id: int
-    category_id: int
-    tags: Optional[List[int]] = []
+    category_ids: List[int]
 
 class PostOut(PostBase):
-    id: int
-    author: UserOut
-    category: CategoryOut
+    author: UserOtherOut
+    categories: List[CategoryOut]
 
-    class Config:
-        orm_model = True
+    model_config = ConfigDict(from_attributes=True)

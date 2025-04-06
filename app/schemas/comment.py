@@ -1,18 +1,24 @@
-from pydantic import BaseModel
-from app.schemas.post import PostOut
-from app.schemas.user import UserOut
+from pydantic import BaseModel, ConfigDict
+from app.schemas.user import UserOtherOut
 
 class CommentBase(BaseModel):
     content: str
 
 class CommentCreate(CommentBase):
-    user_id: int
-    post_id: int
+    pass
+
+class CommentUpdate(CommentBase):
+    pass
+
+class PostOutForComment(BaseModel):
+    id: int
+    title: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 class CommentOut(CommentBase):
     id: int
-    user: UserOut
-    post: PostOut
+    user: UserOtherOut
+    post: PostOutForComment
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

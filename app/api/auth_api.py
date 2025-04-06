@@ -1,56 +1,69 @@
-from flask import Blueprint, request, jsonify
-# from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
-# from sqlalchemy.sql.functions import current_user
+import json
+from datetime import datetime, UTC
+from flask import Blueprint, request, jsonify, make_response
+from pydantic import ValidationError
 from werkzeug.security import generate_password_hash, check_password_hash
+
 from app.middleware.jwt_auth import jwt_manager
 from app.middleware.rate_limiter import limiter_manager
 
 from app.models.user import User
 from app.extensions import db
+from app.schemas.user import UserCreate, UserLogIn, UserOut
 
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['POST'])
-@limiter_manager.redis_rate_limiter(auth=False, max_requests=2, window_seconds=30)
+@limiter_manager.redis_rate_limiter(auth=False, max_requests=4, window_seconds=30)
 def register():
     """Register a new user"""
-    data = request.get_json()
+    try:
+        data = UserCreate(**request.get_json())
+    except ValidationError as e:
+        return make_response(jsonify({
+            'status': 'error',
+            'message': 'Validation failed',
+            'errors': e.errors()[0]['msg']
+        }), 400)
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': 'Invalid request format',
+            'errors': str(e)
+        }), 400
 
-    if not data or not all(k in data for k in ["name", "email", "password"]):
-        return jsonify({'message': 'Missing required fields'}), 400
-
-    if User.query.filter_by(email=data.get('email')).first():
+    if User.query.filter_by(email=data.email).first():
         return jsonify({'message': 'Email already registered'}), 409
 
     new_user = User(
-        name = data.get('name'),
-        email = data.get('email'),
-        password = generate_password_hash(data.get('password'))
+        name = data.name,
+        email = data.email,
+        password = generate_password_hash(data.password)
     )
 
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify({'message': 'User registered successfully'}), 200
+    return jsonify({'message': 'User registered successfully'}), 201
 
 @auth_bp.route('/login', methods=['POST'])
-@limiter_manager.redis_rate_limiter(auth=False, max_requests=2, window_seconds=60)
+@limiter_manager.redis_rate_limiter(auth=False, max_requests=10, window_seconds=60)
 def login():
     """Login a user"""
-    data = request.get_json()
+    try:
+        data = UserLogIn(**request.get_json())
+    except ValidationError as e:
+        return jsonify({'message': 'Invalid data', 'errors': e.errors()}), 400
 
-    if not data or not all(k in data for k in ["email", "password"]):
-        return jsonify({'message': 'Missing required fields'}), 400
-
-    user = User.query.filter_by(email=data.get('email')).first()
-
-    if not user or not check_password_hash(user.password, data.get('password')):
+    user = User.query.filter_by(email=data.email).first()
+    if not user or not check_password_hash(user.password, data.password):
         return jsonify({'message': 'Invalid Credentials'}), 401
 
     access_token = jwt_manager.create_token(str(user.id), token_type="access")
     refresh_token = jwt_manager.create_token(str(user.id), token_type="refresh")
 
     response = jsonify({
+        'message': 'Login Successful',
         'access_token': access_token,
         'user': {
             'id': user.id,
@@ -67,6 +80,9 @@ def login():
         samesite='Strict',  # Prevent CSRF
         max_age=jwt_manager.refresh_expiry  # 7 days
     )
+    user.last_login = datetime.now(UTC)
+    db.session.commit()
+
     return response
 
 @auth_bp.route('/logout', methods=['POST'])
@@ -84,17 +100,15 @@ def refresh(user_id):
     access_token = jwt_manager.create_token(str(user_id), token_type="access")
     return jsonify({'access_token': access_token}), 200
 
-@auth_bp.route('/profile', methods=['POST'])
+@auth_bp.route('/profile', methods=['GET'])
 @jwt_manager.token_required()
 @limiter_manager.redis_rate_limiter()
 def profile(user_id):
     user = User.query.get(user_id)
 
     if not user:
-        jsonify({'message': 'User not found'}), 400
+        return jsonify({'message': 'User not found'}), 404
 
     return jsonify({
-        'id': user.id,
-        'name': user.name,
-        'email': user.email
+        'user': UserOut.model_validate(user).model_dump()
     }), 200

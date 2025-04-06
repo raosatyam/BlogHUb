@@ -1,14 +1,10 @@
-from sqlalchemy import Column, String, Integer
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+from app.extensions import db
 
-Base = declarative_base()
-
-class Category(Base):
+class Category(db.Model):
     __tablename__ = "categories"
 
-    id = Column(Integer, primary_key=True, Index=True)
-    title = Column(String, unique=True, index=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True, index=True)
+    title = db.Column(db.String(255), unique=True, index=True, nullable=False)
 
     #Relationships
-    posts = relationship("Post", back_populates="category")
+    posts = db.relationship("Post", secondary="post_category" ,back_populates="categories")

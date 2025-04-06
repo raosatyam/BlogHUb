@@ -1,18 +1,14 @@
-from sqlalchemy import Column, Integer, Text, ForeignKey
+from app.extensions import db
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
 
-Base = declarative_base()
+class Comment(db.Model):
+    __tablename__ = 'comments'
 
-
-class User(Base):
-    __tablename__ = 'users'
-
-    id = Column(Integer, primary_key=True, index=True)
-    content = Column(Text, nullable=False)
-    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, index=True)
+    content = db.Column(db.Text, nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey("posts.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     #Relationship
-    user = relationship("User", back_populates="comments")
-    post = relationship("Post", back_populates="comments")
+    user = db.relationship("User", back_populates="comments", foreign_keys=[user_id])
+    post = db.relationship("Post", back_populates="comments", foreign_keys=[post_id])

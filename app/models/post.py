@@ -1,20 +1,17 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+from app.extensions import db
+from app.models.associations import post_category
 
-Base = declarative_base()
-
-class Post(Base):
+class Post(db.Model):
     __tablename__ = "posts"
 
-    id = Column(Integer, primary_key=True, Index=True)
-    title = Column(String, nullable=False)
-    content = Column(Text, nullable=False)
-    image = Column(String, nullable=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, index=True)
+    title = db.Column(db.String(255), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    image = db.Column(db.String(255), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     #Relationships
-    author = relationship("User", back_populates="posts")
-    category = relationship("Category", back_populates="posts")
-    comment = relationship("Comment", back_populates="post")
+    author = db.relationship("User", back_populates="posts")
+    comments = db.relationship("Comment", back_populates="post", foreign_keys="Comment.post_id", cascade="all, delete-orphan")
+    categories = db.relationship("Category", secondary="post_category", back_populates="posts")
+

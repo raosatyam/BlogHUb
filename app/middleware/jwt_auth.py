@@ -92,8 +92,8 @@ class CustomJWT:
             def wrapper(*args, **kwargs):
                 token = None
                 if not refresh:
-                    auth_header = request.headers.get("Authorization")
-                    token = auth_header.split(" ")[1] if " " in auth_header else auth_header
+                    auth_header = request.headers.get("Authorization", None)
+                    token = auth_header.split(" ")[1] if auth_header and " " in auth_header else auth_header
                 else:
                     # For refresh token: check cookies
                     token = request.cookies.get("refresh_token")
@@ -116,9 +116,8 @@ class CustomJWT:
                             return jsonify({"message": "Access token provided, refresh required"}), 401
                     except Exception:
                         return jsonify({"message": "Invalid token format"}), 401
-                    return func(user_id, *args, **kwargs)
-
-                return func(user_id, *args, **kwargs)
+                    # return func(*args, user_id=user_id, **kwargs)
+                return func(*args, user_id=int(user_id),  **kwargs)
             return wrapper
         return decorator
 

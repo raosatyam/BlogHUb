@@ -1,5 +1,5 @@
 from app.extensions import db
-from sqlalchemy.orm import relationship
+from datetime import datetime, UTC
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -9,6 +9,8 @@ class User(db.Model):
     email = db.Column(db.String(255), unique=True, index=True, nullable=False)
     about = db.Column(db.Text, nullable=True)
     password = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(UTC), nullable=False)
+    last_login = db.Column(db.DateTime, nullable=True)
 
-    # posts = relationship("Post", back_populates="author")
-    # comments = relationship("Comment", back_populates="user")
+    posts = db.relationship("Post", back_populates="author", foreign_keys="Post.user_id", cascade="all, delete-orphan")
+    comments = db.relationship("Comment", back_populates="user", foreign_keys="Comment.user_id" , cascade="all, delete-orphan")
